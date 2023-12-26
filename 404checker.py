@@ -1,10 +1,10 @@
 import requests
 import csv
+from concurrent.futures import ThreadPoolExecutor
 
 def check_url(url):
     try:
         response = requests.get(url)
-        # Check if the status code is 404
         if response.status_code == 404:
             return 'Not Found'
         else:
@@ -14,22 +14,20 @@ def check_url(url):
         return 'Recheck'
 
 def add_statuses_to_csv(input_file):
-    # Read the CSV file and get URLs from the first column
     with open(input_file, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)
         rows = list(csv_reader)
 
-    # Add a header for the status column
-      # Assuming the first row contains headers
+    header = rows[0]  # Save the header
+    header.append('Status')  # Add a header for the status column
 
-    # Add statuses to each row
-    for row in rows[1:]:
-        url = row[0]
-        status = check_url(url)
-        row.append(status)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        results = list(executor.map(check_url, (row[0] for row in rows[1:])))
+
+    for i, status in enumerate(results):
+        rows[i + 1].append(status)
         print(status)
 
-    # Write the modified rows back to the same CSV file
     with open(input_file, 'w', newline='') as csv_output:
         csv_writer = csv.writer(csv_output)
         csv_writer.writerows(rows)
